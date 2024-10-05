@@ -1,5 +1,6 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
+require 'erb'
 
 # CSVs we're working with
 small = "event_attendees.csv"
@@ -14,13 +15,36 @@ def one_iteration(infile)
   headers: true,
   header_converters: :symbol
   )
+
+  # ERB template
+  template_letter = File.read('form_letter.erb')
+  erb_template = ERB.new(template_letter)
+
   content.each do |row|
     name = row[:first_name]
+    id = row[0]
+
     # Zipcode handling
     zipcode = clean_zipcode_2(row[:zipcode])
     legislators = legislators_by_zipcode(zipcode)
 
-    puts "#{name} #{zipcode} #{legislators}"
+    # Generate and save form letter
+    form_letter = erb_template.result(binding)
+    save_thank_you_letter(id, form_letter)
+    # Creating specific letter
+    # personal_letter = template_letter.gsub('FIRST_NAME', name)
+    # personal_letter = personal_letter.gsub!('LEGISLATORS', legislators)
+  end
+end
+
+# Generate a thank you letter
+def save_thank_you_letter(id, form_letter)
+  Dir.mkdir('output') unless Dir.exist?('output')
+
+  file_name = "output/thanks_#{id}.html"
+
+  File.open(file_name, 'w') do |file|
+    file.puts(form_letter)
   end
 end
 
