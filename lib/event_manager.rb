@@ -10,11 +10,6 @@ large = "event_attendees_full.csv"
 # Iteration 1, parsing csv using the CSV library
 def one_iteration(infile)
 
-  # Civic info API
-  civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new()
-  civic_info.key = File.read('secret.key').strip
-
-
   content = CSV.open(infile, 
   headers: true,
   header_converters: :symbol
@@ -23,22 +18,35 @@ def one_iteration(infile)
     name = row[:first_name]
     # Zipcode handling
     zipcode = clean_zipcode_2(row[:zipcode])
+    legislators = legislators_by_zipcode(zipcode)
 
-    begin
-      # Get each person's local representative
-      legislators = civic_info.representative_info_by_address(
-        address: zipcode,
-        levels: 'country',
-        roles: ['legislatorUpperBody', 'legislatorLowerBody']
-      )
-      legislators = legislators.officials
-    rescue
-      return 'You can find your representatives by visiting www.commoncause.org/take-action/find-elected-officials\n'
-    end
-      puts "#{name} #{zipcode} #{legislators}"
+    puts "#{name} #{zipcode} #{legislators}"
   end
 end
 
+# Return string of legislators given a zip code
+def legislators_by_zipcode(zipcode)
+  # Civic info API
+  civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new()
+  civic_info.key = File.read('secret.key').strip
+
+  begin
+    # Get each person's local representative
+    legislators = civic_info.representative_info_by_address(
+      address: zipcode,
+      levels: 'country',
+      roles: ['legislatorUpperBody', 'legislatorLowerBody']
+    )
+    # This is an array?
+    legislators = legislators.officials
+
+    legislator_names = legislators.map(&:name)
+    legislator_string = legislator_names.join(", ")
+  rescue
+    return 'You can find your representatives by visiting www.commoncause.org/take-action/find-elected-officials\n'
+  end
+  return legislator_string
+end
 # Zipcode cleaning method 
 def clean_zipcode(zipcode)
   # Handling incorrect length
