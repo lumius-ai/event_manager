@@ -1,6 +1,7 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'time'
 
 # CSVs we're working with
 small = "event_attendees.csv"
@@ -20,23 +21,70 @@ def one_iteration(infile)
   template_letter = File.read('form_letter.erb')
   erb_template = ERB.new(template_letter)
 
+  #Dicts for the day and hour stats
+  hours = Hash.new(0)
+  days = Hash.new(0)
+  
   content.each do |row|
     name = row[:first_name]
     id = row[0]
 
     # Zipcode handling
     zipcode = clean_zipcode_2(row[:zipcode])
+    
+    # Get legislators
     legislators = legislators_by_zipcode(zipcode)
 
     # Generate and save form letter
-    form_letter = erb_template.result(binding)
-    save_thank_you_letter(id, form_letter)
-    # Creating specific letter
-    # personal_letter = template_letter.gsub('FIRST_NAME', name)
-    # personal_letter = personal_letter.gsub!('LEGISLATORS', legislators)
+    # form_letter = erb_template.result(binding)
+    # save_thank_you_letter(id, form_letter)
+    # ----------------------------------------
+
+    # Phone number handling
+    phone_number = clean_HomePhone(row[:homephone])
+    # puts("#{name} #{phone_number}") # Don't want to see Paul with a number
+
+    # Add sign up day and hour to list
+    days[get_date(row[:regdate])] += 1
+    hours[get_time(row[:regdate]).hour] += 1
+  end
+  puts("The most frequent hour for sign ups is #{hours.key(hours.values.max)}:00, the most frequent day of signups is #{days.key(days.values.max)}")
+end
+
+# Get the maximum value out of a hash
+
+# Creates a Time object out of a regdate reading
+def get_time(regdate)
+  time = Time.strptime(regdate, '%m/%d/%Y %k:%M')
+  return time
+end
+# Creates a Date object out of a regdate readinf
+def get_date(regdate)
+  date = Date.strptime(regdate.split(" ")[0], '%m/%d/%Y')
+  date = Date::DAYNAMES[date.wday]
+  return date
+end
+# Cleans given phone number
+def clean_HomePhone(phone_number)
+  # Gives just digits
+  pn = digits_only(phone_number.to_s)
+  if pn.length > 11 or pn.length < 10
+    return 'Invalid Number'
+  elsif pn.length == 11
+    pn[0] == '1' ? pn[1..11] : 'Invalid Number'
+  else
+    return pn
   end
 end
 
+# Returns only the digits of the number, no '-' or spaces
+def digits_only(phone_number)
+  number = phone_number.split('-')
+  number = number.join()
+  number = number.split(" ")
+  number = number.join()
+  return number
+end
 # Generate a thank you letter
 def save_thank_you_letter(id, form_letter)
   Dir.mkdir('output') unless Dir.exist?('output')
@@ -71,6 +119,7 @@ def legislators_by_zipcode(zipcode)
   end
   return legislator_string
 end
+
 # Zipcode cleaning method 
 def clean_zipcode(zipcode)
   # Handling incorrect length
