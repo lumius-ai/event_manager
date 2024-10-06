@@ -3,6 +3,8 @@ require 'google/apis/civicinfo_v2'
 require 'erb'
 require 'time'
 
+require 'algorithms'
+
 # CSVs we're working with
 small = "event_attendees.csv"
 large = "event_attendees_full.csv"
@@ -24,6 +26,10 @@ def one_iteration(infile)
   #Dicts for the day and hour stats
   hours = Hash.new(0)
   days = Hash.new(0)
+
+  # Min heaps for the day and hour entries
+  max_hours = Containers::MaxHeap.new()
+  max_days = Containers::MaxHeap.new()
   
   content.each do |row|
     name = row[:first_name]
@@ -33,7 +39,7 @@ def one_iteration(infile)
     zipcode = clean_zipcode_2(row[:zipcode])
     
     # Get legislators
-    legislators = legislators_by_zipcode(zipcode)
+    # legislators = legislators_by_zipcode(zipcode)
 
     # Generate and save form letter
     # form_letter = erb_template.result(binding)
@@ -42,16 +48,31 @@ def one_iteration(infile)
 
     # Phone number handling
     phone_number = clean_HomePhone(row[:homephone])
-    # puts("#{name} #{phone_number}") # Don't want to see Paul with a number
 
     # Add sign up day and hour to list
     days[get_date(row[:regdate])] += 1
-    hours[get_time(row[:regdate]).hour] += 1
+    hours[get_time(row[:regdate]).hour.to_s] += 1
   end
+  max_hours = max_heapify(hours)
+  max_days = max_heapify(days)
+  puts("The most frequent hour for sign ups is #{max_hours.max!.value}:00, the most frequent day of signups is #{max_days.max!.value}")
   puts("The most frequent hour for sign ups is #{hours.key(hours.values.max)}:00, the most frequent day of signups is #{days.key(days.values.max)}")
 end
 
-# Get the maximum value out of a hash
+# Convert dictionary elements to max heap
+def max_heapify(dict)
+  a = []
+
+  dict.keys.each do |content|
+    freq = dict[content]
+    # Sorting by key(frequency), storing value
+    node = Containers::Heap::Node.new(freq, content.to_s)
+    a.append(node)
+  end
+  heap = Containers::MaxHeap.new(a)
+  puts(heap.max!.value)
+  return heap
+end
 
 # Creates a Time object out of a regdate reading
 def get_time(regdate)
