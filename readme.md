@@ -1,0 +1,3 @@
+# Ruby Event Manager
+This program takes a CSV of registration information from a hypothetical political event, and then generates customized thank you letters to the participants which contains the names of the participant's local government representatives based on the zipcode the participant provided.
+It also analyzes the registration date to determine which day and which hour were the most popular registration times.
