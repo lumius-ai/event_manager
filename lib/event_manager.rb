@@ -55,23 +55,18 @@ def one_iteration(infile)
   end
   max_hours = max_heapify(hours)
   max_days = max_heapify(days)
-  puts("The most frequent hour for sign ups is #{max_hours.max!.value}:00, the most frequent day of signups is #{max_days.max!.value}")
+  puts("The most frequent hour for sign ups is #{max_hours.pop}:00, the most frequent day of signups is #{max_days.pop}")
   puts("The most frequent hour for sign ups is #{hours.key(hours.values.max)}:00, the most frequent day of signups is #{days.key(days.values.max)}")
 end
 
 # Convert dictionary elements to max heap
 def max_heapify(dict)
-  a = []
+  max_heap = Containers::MaxHeap.new
 
-  dict.keys.each do |content|
-    freq = dict[content]
-    # Sorting by key(frequency), storing value
-    node = Containers::Heap::Node.new(freq, content.to_s)
-    a.append(node)
+  dict.each_pair do |string, number|
+    max_heap.push(number, string)
   end
-  heap = Containers::MaxHeap.new(a)
-  puts(heap.max!.value)
-  return heap
+  return max_heap
 end
 
 # Creates a Time object out of a regdate reading
